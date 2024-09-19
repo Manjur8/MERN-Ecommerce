@@ -3,6 +3,7 @@ import express from "express";
 // =====impoting routes===
 import userRoute from './routes/user.js'
 import { connectDB } from "./utils/connectDB.js";
+import { customError } from "./middlewares/error.js";
 
 const port = 4000;
 const app = express()
@@ -12,6 +13,8 @@ connectDB()
 
 // ====using rotes====
 app.use("/api/v1/user", userRoute)
+
+app.use(customError)
 
 app.listen(port, () => {
     console.log(`Server started on http://localhost:${port}`)
