@@ -2,6 +2,7 @@ import express from "express";
 
 // =====impoting routes===
 import userRoute from './routes/user.js'
+import productRoute from './routes/product.js'
 import { connectDB } from "./utils/connectDB.js";
 import { customError } from "./middlewares/error.js";
 
@@ -13,6 +14,7 @@ connectDB()
 
 // ====using rotes====
 app.use("/api/v1/user", userRoute)
+app.use("/api/v1/product", productRoute)
 
 app.use(customError)
 
