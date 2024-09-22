@@ -6,7 +6,8 @@ export interface NewUserRequestBody {
     email: string,
     photo: string,
     gender: string,
-    dob: Date
+    dob: Date,
+    role: 'admin' | 'user',
 }
 
 export interface NewProductRequestBody {

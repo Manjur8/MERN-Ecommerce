@@ -1,5 +1,6 @@
 import express from "express";
 import { newUser, getAllUsers, getUserById, deleteUserById } from "../controllers/user.js";
+import { isAdminOnly } from "../middlewares/auth.js";
 
 const app = express.Router();
 
@@ -7,9 +8,9 @@ const app = express.Router();
 app.post("/create", newUser)
 
 // ==route:- get- /api/user/view-all=====
-app.get("/view-all", getAllUsers)
+app.get("/view-all", isAdminOnly, getAllUsers)
 
 // ==route:- get- /api/user/view-all/${id}=====
-app.route("/:id").get(getUserById).delete(deleteUserById)
+app.route("/:id").get(isAdminOnly, getUserById).delete(isAdminOnly, deleteUserById)
 
 export default app;
