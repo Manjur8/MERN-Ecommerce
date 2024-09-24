@@ -4,13 +4,13 @@ import { isAdminOnly } from "../middlewares/auth.js";
 
 const app = express.Router();
 
-// ==route:- post- /api/user/create=====
+// ==route:- post- /api/v1/user/create=====
 app.post("/create", newUser)
 
-// ==route:- get- /api/user/view-all=====
+// ==route:- get- /api/v1/user/view-all=====
 app.get("/view-all", isAdminOnly, getAllUsers)
 
-// ==route:- get- /api/user/view-all/${id}=====
+// ==route:- get- /api/v1/user/${id}=====
 app.route("/:id").get(isAdminOnly, getUserById).delete(isAdminOnly, deleteUserById)
 
 export default app;
