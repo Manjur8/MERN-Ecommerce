@@ -1,5 +1,7 @@
 import express from "express";
 
+import NodeCache from "node-cache";
+
 // =====impoting routes===
 import userRoute from './routes/user.js'
 import productRoute from './routes/product.js'
@@ -11,6 +13,8 @@ const app = express()
 app.use(express.json())
 
 connectDB()
+
+export const myCache = new NodeCache()
 
 // ====using rotes====
 app.use("/api/v1/user", userRoute)
