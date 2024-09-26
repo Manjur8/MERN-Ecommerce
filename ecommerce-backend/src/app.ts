@@ -1,5 +1,7 @@
 import express from "express";
 
+import NodeCache from "node-cache";
+
 // =====impoting routes===
 import userRoute from './routes/user.js'
 import productRoute from './routes/product.js'
@@ -12,10 +14,13 @@ app.use(express.json())
 
 connectDB()
 
+export const myCache = new NodeCache()
+
 // ====using rotes====
 app.use("/api/v1/user", userRoute)
 app.use("/api/v1/product", productRoute)
 
+app.use('/uploads', express.static('uploads'));
 app.use(customError)
 
 app.listen(port, () => {
