@@ -1,6 +1,7 @@
 import express from "express";
 
 import NodeCache from "node-cache";
+import { config } from "dotenv";
 
 // =====impoting routes===
 import userRoute from './routes/user.js'
@@ -8,11 +9,17 @@ import productRoute from './routes/product.js'
 import { connectDB } from "./utils/connectDB.js";
 import { customError } from "./middlewares/error.js";
 
-const port = 4000;
+config({
+    path: './.env',
+})
+
+
+const port = process.env.PORT;
+const MONGO_URI="mongodb://localhost:27017/";
 const app = express()
 app.use(express.json())
 
-connectDB()
+connectDB(MONGO_URI)
 
 export const myCache = new NodeCache()
 
