@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-export const connectDB = () => {
-    const MONGO_URI="mongodb://localhost:27017/"
+export const connectDB = (uri: string) => {
+    const MONGO_URI=uri
     mongoose.connect(MONGO_URI, {
         dbName: 'Ecommerce',
     }).then((c) => {
