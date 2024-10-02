@@ -3,7 +3,7 @@ import { Order } from "../models/order.js";
 import { Product } from "../models/product.js";
 import { InvalidateCacheProps, OrderItemType } from "../types/types.js";
 
-export const invalidateCache = async ({product, order, admin, userId} : InvalidateCacheProps) => {
+export const invalidateCache = async ({product, order, admin, userId, orderId, productId} : InvalidateCacheProps) => {
     if(product) {
         const productKeys: string[] = [
             'latest-products',
@@ -11,24 +11,16 @@ export const invalidateCache = async ({product, order, admin, userId} : Invalida
             'all-products'
         ];
 
-        const products = await Product.find({}).select("_id")
+        if(typeof(productId) === 'string') productKeys.push(`product-${productId}`)
 
-        products.forEach(item => {
-            productKeys.push(`product-${item?._id}`)
-        })
+        if(typeof(productId) === 'object') productId.forEach((item) => (`product-${item}`))
 
         myCache.del(productKeys)
     }
 
     // =====If order is true, userId is must to wotk the function=====
     if(order) {
-        const orderKeys = ["all-orders", `my-orders-${userId}`]
-
-        const orders = await Order.find({}).select("_id")
-
-        orders.forEach((item) => {
-            orderKeys.push(`order-${item?._id}`)
-        })
+        const orderKeys = ["all-orders", `my-orders-${userId}`, `order-${orderId}`]
 
         myCache.del(orderKeys);
     }

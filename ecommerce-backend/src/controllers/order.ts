@@ -80,7 +80,7 @@ export const newOrder = TryCatch(async (req: Request<{},{},NewOrderRequestBody>,
 
     await reduceStock(orderItems);
 
-    await invalidateCache({product: true, order: true, admin: true, userId: user})
+    await invalidateCache({product: true, order: true, admin: true, userId: user, productId: order?.orderItems?.map(i => String(i?.productId))})
 
     return res.status(201).send({
         success: true,
@@ -108,7 +108,7 @@ export const updateOrder = TryCatch(async (req, res, next) => {
 
     const updatedOrder = await order.save();
 
-    await invalidateCache({product: false, order: true, admin: true, userId: order?.user})
+    await invalidateCache({product: false, order: true, admin: true, userId: order?.user, orderId: id })
 
     return res.status(200).send({
         success: true,
@@ -126,7 +126,7 @@ export const deleteOrder = TryCatch(async (req, res, next) => {
 
     await order.deleteOne()
 
-    await invalidateCache({product: false, order: true, admin: true, userId: order?.user})
+    await invalidateCache({product: false, order: true, admin: true, userId: order?.user, orderId: id})
 
     return res.status(200).send({
         success: true,

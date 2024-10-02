@@ -47,7 +47,8 @@ export interface InvalidateCacheProps {
     order?: boolean
     admin?: boolean
     userId?: string
-    productId?: string[]
+    productId?: string[] | string
+    orderId?: string
 }
 
 
