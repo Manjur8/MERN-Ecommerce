@@ -8,6 +8,7 @@ export const customError = (err: ErrorHandler, req: Request, res: Response, next
     
     // ======Mongo Error Message Cusomization=======
     if(err.name === 'CastError') err.message = "Invalid ID"
+    if(err.name === 'MongoServerError') err.message = "Email ID is already registered"
 
     return res.status(err.statusCode).json({
         success: false,

@@ -26,7 +26,12 @@ export const invalidateCache = async ({product, order, admin, userId, orderId, p
     }
 
     if(admin) {
-
+        myCache.del([
+            "admin-stats",
+            "admin-pie-charts",
+            "admin-bar-charts",
+            "admin-line-charts",
+        ]);
     }
 }
 
@@ -38,4 +43,9 @@ export const reduceStock = async (orderItems: OrderItemType[]) => {
         product.stock -= orderItems.length;
         product.save();
     }
+}
+
+export const calculatePercentage = (thisMonth: number, lastMonth: number) => {
+    if(lastMonth === 0) return thisMonth*100;
+    return ((thisMonth - lastMonth)/lastMonth)*100;
 }
