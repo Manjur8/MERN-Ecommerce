@@ -78,6 +78,9 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             lastMonthProducts,
             lastMonthUsers,
             lastMonthOrders,
+            productCount,
+            userCount,
+            allOrders
           ] = await Promise.all([
             thisMonthProductsPromise,
             thisMonthUsersPromise,
@@ -85,6 +88,9 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             lastMonthProductsPromise,
             lastMonthUsersPromise,
             lastMonthOrdersPromise,
+            Product.countDocuments(),
+            User.countDocuments(),
+            Order.find({}).select("total"),
           ]);
 
         const thisMonthRevenue = thisMonthOrders.reduce((total, order) => (total+(order?.total || 0)) ,0);
@@ -103,12 +109,24 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             ),
         };
 
-        stats = { changePercent }
+        const revenue = allOrders.reduce((total, order) => (total + (order.total || 0)), 0);
+
+        const count = {
+          revenue,
+          user: userCount,
+          product: productCount,
+          order: allOrders.length,
+        }
+
+        stats = { changePercent, count }
+
+        myCache.set(key, JSON.stringify(stats))
       
-        return res.status(200).json({
-            success: true,
-            message: 'Stats fetched successfully',
-            data: stats
-        })
     }
+
+    return res.status(200).json({
+        success: true,
+        message: 'Stats fetched successfully',
+        data: stats
+    })
 })
