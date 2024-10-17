@@ -12,12 +12,14 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
 
     const cachedVal =  myCache.get(key)
 
+    const lastMonths = 6;
+
     if(cachedVal) {
         stats = JSON.parse(cachedVal as string)
     } else {
         const today = new Date();
         const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - lastMonths);
     
         const thisMonth = {
           start: new Date(today.getFullYear(), today.getMonth(), 1),
@@ -70,6 +72,12 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             $lte: lastMonth.end,
           },
         });
+        const lastSixMonthsOrdersPromise = Order.find({
+          createdAt: {
+            $gte: sixMonthsAgo,
+            $lte: lastMonth.end,
+          },
+        });
 
         const [
             thisMonthProducts,
@@ -80,7 +88,8 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             lastMonthOrders,
             productCount,
             userCount,
-            allOrders
+            allOrders,
+            lastSixMonthsOrders
           ] = await Promise.all([
             thisMonthProductsPromise,
             thisMonthUsersPromise,
@@ -91,6 +100,7 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             Product.countDocuments(),
             User.countDocuments(),
             Order.find({}).select("total"),
+            lastSixMonthsOrdersPromise,
           ]);
 
         const thisMonthRevenue = thisMonthOrders.reduce((total, order) => (total+(order?.total || 0)) ,0);
@@ -111,6 +121,19 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
 
         const revenue = allOrders.reduce((total, order) => (total + (order.total || 0)), 0);
 
+        const orderMonthCount = new Array(lastMonths).fill(0);
+        const orderMonthlyRevenue = new Array(lastMonths).fill(0);
+
+        lastSixMonthsOrders.forEach((order) => {
+          const orderCreation = order.createdAt;
+          const monthIndex = today.getMonth() - orderCreation.getMonth();
+
+          if(monthIndex < lastMonths) {
+            orderMonthCount[lastMonths - monthIndex -1] += 1;
+            orderMonthlyRevenue[lastMonths - monthIndex -1] += order.total;
+          }
+        })
+
         const count = {
           revenue,
           user: userCount,
@@ -118,9 +141,14 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
           order: allOrders.length,
         }
 
-        stats = { changePercent, count }
+        const chart = {
+          order: orderMonthCount,
+          revenue: orderMonthlyRevenue,
+        }
 
-        myCache.set(key, JSON.stringify(stats))
+        stats = { changePercent, count, chart }
+
+        // myCache.set(key, JSON.stringify(stats))
       
     }
 
