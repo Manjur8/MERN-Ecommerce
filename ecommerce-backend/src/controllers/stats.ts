@@ -3,7 +3,7 @@ import { TryCatch } from "../middlewares/error.js";
 import { Order } from "../models/order.js";
 import { Product } from "../models/product.js";
 import { User } from "../models/user.js";
-import { calculatePercentage } from "../utils/features.js";
+import { calculatePercentage, getInventoriesCount } from "../utils/features.js";
 
 export const getDashboardStats = TryCatch(async(req, res, next) => {
     let stats;
@@ -143,12 +143,7 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
           }
         })
 
-        const categoriesCountPromises = categories.map((category) => Product.countDocuments({ category }));
-        const categoriesCount = await Promise.all(categoriesCountPromises);
-
-        const categoryCountPercentages = categories.map((category, index) => {
-          return { [category]: Math.round((categoriesCount[index]/productCount)*100) }
-        })
+        const categoryCountPercentages = await getInventoriesCount(categories, productCount)
 
         const count = {
           revenue,
@@ -177,8 +172,8 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
 
         stats = { changePercent, count, chart, categoryCountPercentages, gender_ratio, latest_transactions: modifiedLatestTransactions }
 
-        // myCache.set(key, JSON.stringify(stats))
-      
+        myCache.set(key, JSON.stringify(stats))
+
     }
 
     return res.status(200).json({
@@ -186,4 +181,44 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
         message: 'Stats fetched successfully',
         data: stats
     })
+})
+
+export const getPieCharts = TryCatch(async(req, res, next) => {
+  const marketingInvestmentPercentage = 30;
+
+  // ======need to implement cache for this api=====
+
+  const [ processing, delivered, shipped, categoriesList, totalProductsNumber, out_of_Stock, allOrders ] = await Promise.all([
+    Order.countDocuments({ status: 'Processing' }),
+    Order.countDocuments({ status: 'Delivered' }),
+    Order.countDocuments({ status: 'Shipped' }),
+    Product.distinct("category"),
+    Product.countDocuments(),
+    Product.countDocuments({ stock: 0 }),
+    Order.find({}).select(['tax', 'shippingCharges', 'total', 'discount']),
+  ])
+
+  const order_fulfillment = { processing, delivered, shipped }
+  const categories_count = await getInventoriesCount(categoriesList, totalProductsNumber);
+  const stock_available = {
+    in_stock: totalProductsNumber - out_of_Stock,
+    out_of_Stock
+  }
+
+  const grossIncome = allOrders.reduce((total, order) => (total + (order.total || 0)), 0);
+  const discount = allOrders.reduce((sum, order) => (sum +( order.discount || 0)), 0)
+  const burnt = allOrders.reduce((sum, order) => (sum +( order.tax || 0)), 0)
+  const production_cost = allOrders.reduce((sum, order) => (sum +( order.shippingCharges || 0)), 0)
+  const marketing_cost = Math.round(grossIncome * marketingInvestmentPercentage / 100);
+  const net_margin = grossIncome - discount - burnt - production_cost - marketing_cost;
+
+  const revenue_distribution = {
+    production_cost, marketing_cost, discount, burnt, net_margin
+  }
+
+  return res.json({
+    success: true,
+    message: 'Chart fetched successfully',
+    data: { order_fulfillment, categories_count, stock_available, revenue_distribution }
+  })
 })
