@@ -13,6 +13,7 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
     const cachedVal =  myCache.get(key)
 
     const lastMonths = 6;
+    const latestTranstionNumber = 5;
 
     if(cachedVal) {
         stats = JSON.parse(cachedVal as string)
@@ -79,6 +80,8 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
           },
         });
 
+        const lastTransactionsOrdersPromise = Order.find({}).select(["orderItems", "status", "total", "discount"]).limit(latestTranstionNumber);
+
         const [
             thisMonthProducts,
             thisMonthUsers,
@@ -91,6 +94,8 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             allOrders,
             lastSixMonthsOrders,
             categories,
+            femaleUserCount,
+            latestTransactions,
           ] = await Promise.all([
             thisMonthProductsPromise,
             thisMonthUsersPromise,
@@ -103,6 +108,8 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
             Order.find({}).select("total"),
             lastSixMonthsOrdersPromise,
             Product.distinct("category"),
+            User.countDocuments({ gender: 'female'}),
+            lastTransactionsOrdersPromise,
           ]);
 
         const thisMonthRevenue = thisMonthOrders.reduce((total, order) => (total+(order?.total || 0)) ,0);
@@ -155,7 +162,20 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
           revenue: orderMonthlyRevenue,
         }
 
-        stats = { changePercent, count, chart, categoryCountPercentages }
+        const gender_ratio = {
+          male: userCount - femaleUserCount,
+          female: femaleUserCount
+        }
+
+        const modifiedLatestTransactions = latestTransactions.map(transaction => ({
+          _id: transaction._id,
+          amount: transaction.total,
+          discount: transaction.discount,
+          quantity: transaction.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          status: transaction.status,
+        }))
+
+        stats = { changePercent, count, chart, categoryCountPercentages, gender_ratio, latest_transactions: modifiedLatestTransactions }
 
         // myCache.set(key, JSON.stringify(stats))
       
