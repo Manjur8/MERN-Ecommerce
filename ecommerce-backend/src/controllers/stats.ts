@@ -186,39 +186,65 @@ export const getDashboardStats = TryCatch(async(req, res, next) => {
 export const getPieCharts = TryCatch(async(req, res, next) => {
   const marketingInvestmentPercentage = 30;
 
-  // ======need to implement cache for this api=====
+  const cachedKey = 'admin_pie-chars';
 
-  const [ processing, delivered, shipped, categoriesList, totalProductsNumber, out_of_Stock, allOrders ] = await Promise.all([
-    Order.countDocuments({ status: 'Processing' }),
-    Order.countDocuments({ status: 'Delivered' }),
-    Order.countDocuments({ status: 'Shipped' }),
-    Product.distinct("category"),
-    Product.countDocuments(),
-    Product.countDocuments({ stock: 0 }),
-    Order.find({}).select(['tax', 'shippingCharges', 'total', 'discount']),
-  ])
+  const cachedVal = myCache.get(cachedKey);
 
-  const order_fulfillment = { processing, delivered, shipped }
-  const categories_count = await getInventoriesCount(categoriesList, totalProductsNumber);
-  const stock_available = {
-    in_stock: totalProductsNumber - out_of_Stock,
-    out_of_Stock
+  let chart;
+
+  if (cachedVal) {
+    chart = cachedVal
+  } else {    
+      const [ processing, delivered, shipped, categoriesList, totalProductsNumber, out_of_Stock, allOrders, usersDobs, number_of_admin, number_of_user  ] = await Promise.all([
+        Order.countDocuments({ status: 'Processing' }),
+        Order.countDocuments({ status: 'Delivered' }),
+        Order.countDocuments({ status: 'Shipped' }),
+        Product.distinct("category"),
+        Product.countDocuments(),
+        Product.countDocuments({ stock: 0 }),
+        Order.find({}).select(['tax', 'shippingCharges', 'total', 'discount']),
+        User.find({}).select(["dob"]),
+        User.countDocuments({role: 'admin'}),
+        User.countDocuments({role: 'user'}),
+      ])
+    
+      const order_fulfillment = { processing, delivered, shipped }
+      const categories_count = await getInventoriesCount(categoriesList, totalProductsNumber);
+      const stock_available = {
+        in_stock: totalProductsNumber - out_of_Stock,
+        out_of_Stock
+      }
+    
+      const grossIncome = allOrders.reduce((total, order) => (total + (order.total || 0)), 0);
+      const discount = allOrders.reduce((sum, order) => (sum +( order.discount || 0)), 0)
+      const burnt = allOrders.reduce((sum, order) => (sum +( order.tax || 0)), 0)
+      const production_cost = allOrders.reduce((sum, order) => (sum +( order.shippingCharges || 0)), 0)
+      const marketing_cost = Math.round(grossIncome * marketingInvestmentPercentage / 100);
+      const net_margin = grossIncome - discount - burnt - production_cost - marketing_cost;
+    
+      const revenue_distribution = {
+        production_cost, marketing_cost, discount, burnt, net_margin
+      }
+    
+      
+      const age_groups = {
+        teen: usersDobs?.filter(user => user.age <= 20)?.length,
+        adult: usersDobs?.filter(user => user.age > 20 && user.age <= 40)?.length,
+        old: usersDobs?.filter(user => user.age > 40)?.length,
+      }
+    
+      const role_groups = {
+        number_of_admin, number_of_user
+      }
+
+      chart = { order_fulfillment, categories_count, stock_available, revenue_distribution, age_groups, role_groups }
   }
 
-  const grossIncome = allOrders.reduce((total, order) => (total + (order.total || 0)), 0);
-  const discount = allOrders.reduce((sum, order) => (sum +( order.discount || 0)), 0)
-  const burnt = allOrders.reduce((sum, order) => (sum +( order.tax || 0)), 0)
-  const production_cost = allOrders.reduce((sum, order) => (sum +( order.shippingCharges || 0)), 0)
-  const marketing_cost = Math.round(grossIncome * marketingInvestmentPercentage / 100);
-  const net_margin = grossIncome - discount - burnt - production_cost - marketing_cost;
-
-  const revenue_distribution = {
-    production_cost, marketing_cost, discount, burnt, net_margin
-  }
+  myCache.set(cachedKey, JSON.stringify(chart))
 
   return res.json({
     success: true,
     message: 'Chart fetched successfully',
-    data: { order_fulfillment, categories_count, stock_available, revenue_distribution }
+    data: chart,
   })
 })
